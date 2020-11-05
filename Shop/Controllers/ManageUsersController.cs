@@ -1,0 +1,101 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
+using Shop.Models;
+using Shop.DataView;
+
+namespace Shop.Controllers
+{
+    public class ManageUsersController : Controller
+    {
+        UserManager<User> _userManager;
+
+        public ManageUsersController(UserManager<User> userManager)
+        {
+            _userManager = userManager;
+        }
+
+        public IActionResult Index() => View(_userManager.Users.ToList());
+
+        public IActionResult Create() => View();
+
+        [HttpPost]
+        public async Task<IActionResult> Create(CreateUserDataView model)
+        {
+            if (ModelState.IsValid)
+            {
+                User user = new User { Surname = model.Surname, Name=model.Name, Email = model.Email, UserName = model.Email, Phone = model.Phone };
+                var result = await _userManager.CreateAsync(user, model.Password);
+                if (result.Succeeded)
+                {
+                    return RedirectToAction("Index");
+                }
+                else
+                {
+                    foreach (var error in result.Errors)
+                    {
+                        ModelState.AddModelError(string.Empty, error.Description);
+                    }
+                }
+            }
+            return View(model);
+        }
+
+        public async Task<IActionResult> Edit(string id)
+        {
+            User user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+            EditUserDataView model = new EditUserDataView { Id = user.Id, Surname = user.Surname, Name = user.Name, Email = user.Email, Phone = user.Phone };
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Edit(EditUserDataView model)
+        {
+            if (ModelState.IsValid)
+            {
+                User user = await _userManager.FindByIdAsync(model.Id);
+                if (user != null)
+                {
+                    user.Surname = model.Surname;
+                    user.Name = model.Name;
+                    user.Email = model.Email;
+                    user.UserName = model.Email;
+                    user.Phone = model.Phone;
+
+                    var result = await _userManager.UpdateAsync(user);
+                    if (result.Succeeded)
+                    {
+                        return RedirectToAction("Index");
+                    }
+                    else
+                    {
+                        foreach (var error in result.Errors)
+                        {
+                            ModelState.AddModelError(string.Empty, error.Description);
+                        }
+                    }
+                }
+            }
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> Delete(string id)
+        {
+            User user = await _userManager.FindByIdAsync(id);
+            if (user != null)
+            {
+                IdentityResult result = await _userManager.DeleteAsync(user);
+            }
+            return RedirectToAction("Index");
+        }
+    }
+}
